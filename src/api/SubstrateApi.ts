@@ -10,7 +10,7 @@ export type ExtrinsicPayload = SubmittableExtrinsic<ApiTypes>;
 
 export default class SubstrateApi {
     private _provider: WsProvider;
-    private _api: ApiPromise | undefined;
+    private _api: ApiPromise;
     private _keyring: Keyring;
     private _mnemonic: string;
     private _tokenDecimals: number[];
@@ -23,6 +23,10 @@ export default class SubstrateApi {
 
         // create a random account if no mnemonic was provided
         this._mnemonic = mnemonic || mnemonicGenerate();
+
+        this._api = new ApiPromise({
+            provider: this._provider,
+        })
     }
 
     public get api() {
@@ -49,25 +53,21 @@ export default class SubstrateApi {
     }
 
     public async start() {
-        this._api = await (
-            await ApiPromise.create({
-                provider: this._provider,
-                //todo: here, we don't add the chain type metadata, but for some transactions, we may want to do that
-                types: {},
-            })
-        ).isReady;
+        this._api = await this._api.isReady;
 
         const chainProperties = await this._api.rpc.system.properties();
 
-        const ss58Format = chainProperties.ss58Format.unwrap().toNumber();
+        console.log(chainProperties.toHuman())
+
+        const ss58Format = chainProperties.ss58Format.unwrapOrDefault().toNumber();
 
         this._tokenDecimals = chainProperties.tokenDecimals
-            .unwrap()
+            .unwrapOrDefault()
             .toArray()
             .map((i) => i.toNumber());
 
         this._tokenSymbols = chainProperties.tokenSymbol
-            .unwrap()
+            .unwrapOrDefault()
             .toArray()
             .map((i) => i.toString());
 

@@ -4,10 +4,10 @@ import endpoints from './config/endpoints.json';
 export default async function app() {
 
     const accountKey = process.env.SUBSTRATE_MNEMONIC;
-    const api = new SubstrateApi(endpoints.astar, accountKey);
+    const api = new SubstrateApi(endpoints.local, accountKey);
     await api.start();
 
-    const account = await api.buildStorageQuery('timestamp', 'now');
+    const account = await api.buildStorageQuery('system', 'account', api.account.address);
 
     console.log(api.account.address);
     console.log(account.toHuman());
