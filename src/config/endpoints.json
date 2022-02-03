@@ -1,0 +1,6 @@
+{
+    "polkadot": "wss://rpc.polkadot.io",
+    "astar": "wss://astar.api.onfinality.io/public-ws",
+    "shiden": "wss://rpc.shiden.astar.network",
+    "local": "ws://localhost:9944"
+}
