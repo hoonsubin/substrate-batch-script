@@ -23,15 +23,14 @@ export default async function app() {
 
 const sendBatchTransaction = async (api: SubstrateApi, txList: TransferItem[]) => {
     console.log(`sending batch transfer with ${txList.length} items`);
+    const chainDecimal = api.chainProperty.tokenDecimals[0];
 
     const batchPayload = _.map(txList, (i) => {
-        const chainDecimal = api.chainProperty.tokenDecimals[0];
+        
         // converts token amount to chain amount
         const transferAmount = utils.tokenToMinimalDenom(i.amount, chainDecimal);
 
-        const tx = api.buildTxCall('balances', 'transfer', i.address, transferAmount);
-
-        return tx;
+        return api.buildTxCall('balances', 'transfer', i.address, transferAmount);
     });
 
     const batchTx = api.wrapBatchAll(batchPayload);
