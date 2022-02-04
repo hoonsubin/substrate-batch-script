@@ -1,23 +1,25 @@
 import BigNumber from 'bignumber.js';
 import BN from 'bn.js';
+import { VestingSchedule } from '../types';
 
-export const durationToVestingSchedule = (startingBlock: number, totalAmount: string, durationMonths: number) => {
-    const ONE_MONTH = 28 * 24 * 60 * 60;
-    const BLOCK_PER_SECOND = 12;
+const ONE_MONTH = 28 * 24 * 60 * 60;
+
+export const durationToVestingSchedule = (startingBlock: number, totalAmount: string, durationMonths: number, blockTime: number = 12) => {
+    
     // one month in block numbers
-    const ONE_MONTH_BLOCKS_PER_12_SECONDS = ONE_MONTH / BLOCK_PER_SECOND;
+    const oneMonthInBlocks = ONE_MONTH / blockTime;
 
-    const totalVestedBlocks = ONE_MONTH_BLOCKS_PER_12_SECONDS * durationMonths;
-    //console.log(totalVestedBlocks)
+    const totalVestedBlocks = oneMonthInBlocks * durationMonths;
+
     // amount per block * total vested block number must equal the total amount
-    const astrVal = new BigNumber(totalAmount);
-    const amountPerBlock = astrVal.dividedBy(totalVestedBlocks);
+    const astrVal = new BN(totalAmount);
+    const amountPerBlock = astrVal.divRound(new BN(totalVestedBlocks));
 
     return {
-        locked: astrVal.toFixed(),
-        perBlock: amountPerBlock.toFixed(),
+        locked: astrVal.toString(),
+        perBlock: amountPerBlock.toString(),
         startingBlock,
-    };
+    } as VestingSchedule;
 };
 
 /**
@@ -29,5 +31,5 @@ export const durationToVestingSchedule = (startingBlock: number, totalAmount: st
 export const tokenToMinimalDenom = (amount: string | number, decimalPoint: number) => {
     const tokenAmount = new BigNumber(amount);
     const fullAmount = tokenAmount.multipliedBy(new BigNumber(10).pow(decimalPoint));
-    return new BN(fullAmount.toString());
-}
+    return new BN(fullAmount.toFixed());
+};
