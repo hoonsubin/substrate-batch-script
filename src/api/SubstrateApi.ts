@@ -6,16 +6,20 @@ import BN from 'bn.js';
 
 const AUTO_CONNECT_MS = 10_000; // [ms]
 
-export type ExtrinsicPayload = SubmittableExtrinsic<ApiTypes>;
+export type ExtrinsicPayload = SubmittableExtrinsic<'promise'>;
+
+interface ChainProperty {
+    tokenSymbols: string[];
+    tokenDecimals: number[];
+    chainName: string;
+}
 
 export default class SubstrateApi {
     private _provider: WsProvider;
     private _api: ApiPromise;
     private _keyring: Keyring;
     private _mnemonic: string;
-    private _tokenDecimals: number[];
-    private _tokenSymbols: string[];
-    private _chainName: string;
+    private _chaiProperty: ChainProperty;
 
     constructor(endpoint: string, mnemonic?: string) {
         this._provider = new WsProvider(endpoint, AUTO_CONNECT_MS);
@@ -24,12 +28,13 @@ export default class SubstrateApi {
         // create a random account if no mnemonic was provided
         this._mnemonic = mnemonic || mnemonicGenerate();
 
+        console.log('connecting to ' + endpoint);
         this._api = new ApiPromise({
             provider: this._provider,
-        })
+        });
     }
 
-    public get api() {
+    public get apiInst() {
         if (!this._api) {
             throw new Error('The ApiPromise has not been initialized');
         }
@@ -40,16 +45,8 @@ export default class SubstrateApi {
         return this._keyring.addFromUri(this._mnemonic, { name: 'Default' }, 'sr25519');
     }
 
-    public get tokenSymbols() {
-        return this._tokenSymbols;
-    }
-
-    public get tokenDecimals() {
-        return this._tokenDecimals;
-    }
-
-    public get chainName() {
-        return this._chainName;
+    public get chainProperty() {
+        return this._chaiProperty;
     }
 
     public async start() {
@@ -57,23 +54,27 @@ export default class SubstrateApi {
 
         const chainProperties = await this._api.rpc.system.properties();
 
-        console.log(chainProperties.toHuman())
-
         const ss58Format = chainProperties.ss58Format.unwrapOrDefault().toNumber();
 
-        this._tokenDecimals = chainProperties.tokenDecimals
+        const tokenDecimals = chainProperties.tokenDecimals
             .unwrapOrDefault()
             .toArray()
             .map((i) => i.toNumber());
 
-        this._tokenSymbols = chainProperties.tokenSymbol
+        const tokenSymbols = chainProperties.tokenSymbol
             .unwrapOrDefault()
             .toArray()
             .map((i) => i.toString());
 
-        const name = await this._api.rpc.system.chain();
-        this._chainName = name.toString();
+        const chainName = (await this._api.rpc.system.chain()).toString();
 
+        console.log(`connected to ${chainName} with account ${this.account.address}`);
+
+        this._chaiProperty = {
+            tokenSymbols,
+            tokenDecimals,
+            chainName,
+        };
         this._keyring.setSS58Format(ss58Format);
 
         //return this;
@@ -93,7 +94,7 @@ export default class SubstrateApi {
         throw 'Undefined force transfer';
     }
 
-    public buildTxCall(extrinsic: string, method: string, ...args: any[]) {
+    public buildTxCall(extrinsic: string, method: string, ...args: any[]): ExtrinsicPayload {
         const ext = this._api?.tx[extrinsic][method](...args);
         if (ext) return ext;
         throw `Undefined extrinsic call ${extrinsic} with method ${method}`;
@@ -109,19 +110,20 @@ export default class SubstrateApi {
         return ((await this._api?.query.system.account(this.account.address)) as any)?.nonce.toNumber();
     }
 
-    public wrapBatchAll(txs: ExtrinsicPayload[]) {
+    public wrapBatchAll(txs: ExtrinsicPayload[]): ExtrinsicPayload {
         const ext = this._api?.tx.utility.batchAll(txs);
         if (ext) return ext;
         throw 'Undefined batch all';
     }
 
-    public wrapSudo(tx: ExtrinsicPayload) {
+    public wrapSudo(tx: ExtrinsicPayload): ExtrinsicPayload {
         const ext = this._api?.tx.sudo.sudo(tx);
         if (ext) return ext;
         throw 'Undefined sudo';
     }
 
     public async signAndSend(tx: ExtrinsicPayload, options?: Partial<SignerOptions>) {
-        return await tx.signAndSend(this.account, options);
+        // ensure that we automatically increment the nonce per transaction
+        return await tx.signAndSend(this.account, { nonce: -1, ...options });
     }
 }
