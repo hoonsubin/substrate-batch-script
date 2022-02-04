@@ -1,3 +1,4 @@
+import { SubmittableExtrinsic } from '@polkadot/api/types';
 import BN from 'bn.js';
 
 export interface TransferItem {
@@ -14,3 +15,5 @@ export interface VestingSchedule {
     perBlock: string;
     startingBlock: number;
 }
+
+export type ExtrinsicPayload = SubmittableExtrinsic<'promise'>;

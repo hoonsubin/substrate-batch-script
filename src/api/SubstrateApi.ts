@@ -3,11 +3,9 @@ import { ApiTypes, SignerOptions, SubmittableExtrinsic } from '@polkadot/api/typ
 import { mnemonicGenerate } from '@polkadot/util-crypto';
 import { Keyring } from '@polkadot/keyring';
 import BN from 'bn.js';
+import { ExtrinsicPayload } from '../types';
 
 const AUTO_CONNECT_MS = 10_000; // [ms]
-
-export type ExtrinsicPayload = SubmittableExtrinsic<'promise'>;
-
 interface ChainProperty {
     tokenSymbols: string[];
     tokenDecimals: number[];

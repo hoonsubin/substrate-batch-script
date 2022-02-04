@@ -12,11 +12,11 @@ export const durationToVestingSchedule = (startingBlock: number, totalAmount: st
     const totalVestedBlocks = oneMonthInBlocks * durationMonths;
 
     // amount per block * total vested block number must equal the total amount
-    const astrVal = new BN(totalAmount);
-    const amountPerBlock = astrVal.divRound(new BN(totalVestedBlocks));
+    const totalLocked = new BN(totalAmount);
+    const amountPerBlock = totalLocked.divRound(new BN(totalVestedBlocks));
 
     return {
-        locked: astrVal.toString(),
+        locked: totalLocked.toString(),
         perBlock: amountPerBlock.toString(),
         startingBlock,
     } as VestingSchedule;
