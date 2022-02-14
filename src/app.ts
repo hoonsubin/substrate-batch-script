@@ -37,7 +37,7 @@ const sendBatchTransfer = async (api: SubstrateApi, txList: TransferItem[], chun
         // converts token amount to chain amount
         const transferAmount = utils.tokenToMinimalDenom(i.amount, chainDecimal);
 
-        return api.buildTxCall('balances', 'transfer', i.to, transferAmount);
+        return api.buildTxCall('balances', 'transfer', i.address, transferAmount);
     });
 
     await sendAsChunks(api, batchPayload, chunks);
@@ -57,10 +57,8 @@ const sendBatchVestedTransfer = async (api: SubstrateApi, txList: VestedTransfer
             transferAmount.toString(),
             i.vestedMonths,
         );
-
-        console.log('Vesting schedule ', vestingSchedule);
-
-        return api.buildTxCall('vesting', 'vestedTransfer', i.to, vestingSchedule);
+            
+        return api.buildTxCall('vesting', 'vestedTransfer', i.address, vestingSchedule);
     });
 
     await sendAsChunks(api, batchPayload, chunks);
@@ -81,7 +79,7 @@ const sendBatchForceVestedTransfer = async (api: SubstrateApi, sourceAccount: st
             i.vestedMonths,
         );
 
-        return api.buildTxCall('vesting', 'forceVestedTransfer', sourceAccount, i.to, vestingSchedule);
+        return api.buildTxCall('vesting', 'forceVestedTransfer', sourceAccount, i.address, vestingSchedule);
     });
 
     await sendAsChunksSudo(api, batchPayload, chunks);
@@ -102,7 +100,7 @@ const sendBatchForceUpdateSchedules = async (api: SubstrateApi, txList: VestedTr
             i.vestedMonths,
         );
 
-        return api.buildTxCall('vesting', 'forceUpdateSchedules', i.to, [vestingSchedule]);
+        return api.buildTxCall('vesting', 'forceUpdateSchedules', i.address, [vestingSchedule]);
     });
 
     await sendAsChunksSudo(api, batchPayload, chunks);
