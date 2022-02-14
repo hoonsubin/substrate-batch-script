@@ -147,7 +147,10 @@ export default class SubstrateApi {
                         message = `${dispatchError.type}.${dispatchError.asToken.type}`;
                     }
 
-                    console.error(`error: ${section}.${method} ${message}`);
+                    const errorMessage = `${section}.${method} ${message}`;
+                    console.error(`error: ${errorMessage}`);
+
+                    throw new Error(message);
                 } 
                 else if (section === 'utility' && method === 'BatchInterrupted') {
                     const anyData = data as any;
