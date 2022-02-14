@@ -10,13 +10,13 @@ export default async function app() {
     const api = new SubstrateApi(endpoints.local, senderKey);
     await api.start();
 
-    const txList = (await utils.readCsv('/Users/bobo/Downloads/reward-vesting-fix (1).csv')) as TransferItem[];
+    const txList = (await utils.readCsv('/Users/hoonkim/Downloads/reward-vesting-fix.csv')) as TransferItem[];
 
     const txVestedList = _.map(txList, (i) => {
         return {
             ...i,
-            vestedMonths: 7,
-            // vestedMonths: 15,
+            //vestedMonths: 7,
+            vestedMonths: 15,
             startingBlock: 210541,
         };
     });
