@@ -10,18 +10,20 @@ export default async function app() {
     const api = new SubstrateApi(endpoints.local, senderKey);
     await api.start();
 
-    const txList = (await utils.readCsv('/Users/hoonkim/Downloads/reward-vesting-fix.csv')) as TransferItem[];
+    const txList = (await utils.readCsv('/Users/bobo/Downloads/reward-vesting-fix.csv')) as TransferItem[];
 
     const txVestedList = _.map(txList, (i) => {
         return {
             ...i,
-            //vestedMonths: 7,
-            vestedMonths: 15,
+            vestedMonths: 7,
+            // vestedMonths: 15,
             startingBlock: 210541,
         };
     });
 
-    await sendBatchForceVestedTransfer(api, 'ajYMsCKsEAhEvHpeA4XqsfiA9v1CdzZPrCfS6pEfeGHW9j8', txVestedList);
+    // await sendBatchForceVestedTransfer(api, 'ajYMsCKsEAhEvHpeA4XqsfiA9v1CdzZPrCfS6pEfeGHW9j8', txVestedList);
+    // await sendBatchVestedTransfer(api, txVestedList);
+    await sendBatchForceUpdateSchedules(api, txVestedList);
 
     // we need this to exit out of polkadot-js/api instance
     process.exit(0);
@@ -56,6 +58,8 @@ const sendBatchVestedTransfer = async (api: SubstrateApi, txList: VestedTransfer
             i.vestedMonths,
         );
 
+        console.log('Vesting schedule ', vestingSchedule);
+
         return api.buildTxCall('vesting', 'vestedTransfer', i.to, vestingSchedule);
     });
 
@@ -63,7 +67,7 @@ const sendBatchVestedTransfer = async (api: SubstrateApi, txList: VestedTransfer
 };
 
 const sendBatchForceVestedTransfer = async (api: SubstrateApi, sourceAccount: string, txList: VestedTransferItem[], chunks: number = 100) => {
-    console.log(`sending batch vested transfer with ${txList.length} items`);
+    console.log(`sending batch force vested transfer with ${txList.length} items`);
     const chainDecimal = api.chainProperty.tokenDecimals[0];
 
     const batchPayload = _.map(txList, (i) => {
@@ -84,7 +88,7 @@ const sendBatchForceVestedTransfer = async (api: SubstrateApi, sourceAccount: st
 };
 
 const sendBatchForceUpdateSchedules = async (api: SubstrateApi, txList: VestedTransferItem[], chunks: number = 100) => {
-    console.log(`sending batch vested transfer with ${txList.length} items`);
+    console.log(`sending batch force update schedules transfer with ${txList.length} items`);
     const chainDecimal = api.chainProperty.tokenDecimals[0];
 
     const batchPayload = _.map(txList, (i) => {
