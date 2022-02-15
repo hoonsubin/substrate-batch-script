@@ -15,8 +15,8 @@ export default async function app() {
     const txVestedList = _.map(txList, (i) => {
         return {
             ...i,
-            //vestedMonths: 7,
-            vestedMonths: 15,
+            vestedMonths: 7,
+            // vestedMonths: 15,
             startingBlock: 210541,
         };
     });
