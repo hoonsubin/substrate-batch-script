@@ -15,13 +15,15 @@ export default async function app() {
     const txVestedList = _.map(txList, (i) => {
         return {
             ...i,
-            //vestedMonths: 7,
-            vestedMonths: 15,
+            vestedMonths: 7,
+            // vestedMonths: 15,
             startingBlock: 210541,
         };
     });
 
-    await sendBatchForceVestedTransfer(api, 'ajYMsCKsEAhEvHpeA4XqsfiA9v1CdzZPrCfS6pEfeGHW9j8', txVestedList);
+    // await sendBatchForceVestedTransfer(api, 'ajYMsCKsEAhEvHpeA4XqsfiA9v1CdzZPrCfS6pEfeGHW9j8', txVestedList);
+    // await sendBatchVestedTransfer(api, txVestedList);
+    await sendBatchForceUpdateSchedules(api, txVestedList);
 
     // we need this to exit out of polkadot-js/api instance
     process.exit(0);
@@ -35,7 +37,7 @@ const sendBatchTransfer = async (api: SubstrateApi, txList: TransferItem[], chun
         // converts token amount to chain amount
         const transferAmount = utils.tokenToMinimalDenom(i.amount, chainDecimal);
 
-        return api.buildTxCall('balances', 'transfer', i.to, transferAmount);
+        return api.buildTxCall('balances', 'transfer', i.address, transferAmount);
     });
 
     await sendAsChunks(api, batchPayload, chunks);
@@ -55,15 +57,15 @@ const sendBatchVestedTransfer = async (api: SubstrateApi, txList: VestedTransfer
             transferAmount.toString(),
             i.vestedMonths,
         );
-
-        return api.buildTxCall('vesting', 'vestedTransfer', i.to, vestingSchedule);
+            
+        return api.buildTxCall('vesting', 'vestedTransfer', i.address, vestingSchedule);
     });
 
     await sendAsChunks(api, batchPayload, chunks);
 };
 
 const sendBatchForceVestedTransfer = async (api: SubstrateApi, sourceAccount: string, txList: VestedTransferItem[], chunks: number = 100) => {
-    console.log(`sending batch vested transfer with ${txList.length} items`);
+    console.log(`sending batch force vested transfer with ${txList.length} items`);
     const chainDecimal = api.chainProperty.tokenDecimals[0];
 
     const batchPayload = _.map(txList, (i) => {
@@ -77,14 +79,14 @@ const sendBatchForceVestedTransfer = async (api: SubstrateApi, sourceAccount: st
             i.vestedMonths,
         );
 
-        return api.buildTxCall('vesting', 'forceVestedTransfer', sourceAccount, i.to, vestingSchedule);
+        return api.buildTxCall('vesting', 'forceVestedTransfer', sourceAccount, i.address, vestingSchedule);
     });
 
     await sendAsChunksSudo(api, batchPayload, chunks);
 };
 
 const sendBatchForceUpdateSchedules = async (api: SubstrateApi, txList: VestedTransferItem[], chunks: number = 100) => {
-    console.log(`sending batch vested transfer with ${txList.length} items`);
+    console.log(`sending batch force update schedules transfer with ${txList.length} items`);
     const chainDecimal = api.chainProperty.tokenDecimals[0];
 
     const batchPayload = _.map(txList, (i) => {
@@ -98,7 +100,7 @@ const sendBatchForceUpdateSchedules = async (api: SubstrateApi, txList: VestedTr
             i.vestedMonths,
         );
 
-        return api.buildTxCall('vesting', 'forceUpdateSchedules', i.to, [vestingSchedule]);
+        return api.buildTxCall('vesting', 'forceUpdateSchedules', i.address, [vestingSchedule]);
     });
 
     await sendAsChunksSudo(api, batchPayload, chunks);

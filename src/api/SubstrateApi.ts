@@ -1,5 +1,7 @@
 import { ApiPromise, WsProvider } from '@polkadot/api';
 import { ApiTypes, SignerOptions, SubmittableExtrinsic } from '@polkadot/api/types';
+import { ITuple } from '@polkadot/types/types';
+import { DispatchError } from '@polkadot/types/interfaces';
 import { mnemonicGenerate } from '@polkadot/util-crypto';
 import { Keyring } from '@polkadot/keyring';
 import BN from 'bn.js';
@@ -122,6 +124,41 @@ export default class SubstrateApi {
 
     public async signAndSend(tx: ExtrinsicPayload, options?: Partial<SignerOptions>) {
         // ensure that we automatically increment the nonce per transaction
-        return await tx.signAndSend(this.account, { nonce: -1, ...options });
+        return await tx.signAndSend(this.account, { nonce: -1, ...options }, (result) => {
+            // handle transaction errors
+            result.events
+                .filter((record): boolean => !!record.event && record.event.section !== 'democracy')
+                .map(({ event: { data, method, section } }) => {
+
+                if (section === 'system' && method === 'ExtrinsicFailed') {
+                    const [dispatchError] = data as unknown as ITuple<[DispatchError]>;
+                    let message = dispatchError.type.toString();
+
+                    if (dispatchError.isModule) {
+                    try {
+                        const mod = dispatchError.asModule;
+                        const error = dispatchError.registry.findMetaError(mod);
+
+                        message = `${error.section}.${error.name}`;
+                    } catch (error) {
+                        console.error(error);
+                    }
+                    } else if (dispatchError.isToken) {
+                        message = `${dispatchError.type}.${dispatchError.asToken.type}`;
+                    }
+
+                    const errorMessage = `${section}.${method} ${message}`;
+                    console.error(`error: ${errorMessage}`);
+
+                    throw new Error(message);
+                } 
+                else if (section === 'utility' && method === 'BatchInterrupted') {
+                    const anyData = data as any;
+                    const error = anyData[1].registry.findMetaError(anyData[1].asModule);
+                    let message = `${error.section}.${error.name}`;
+                    console.error(`error: ${section}.${method} ${message}`);
+                }
+            });
+        });
     }
 }
