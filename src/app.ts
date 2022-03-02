@@ -2,7 +2,7 @@ import SubstrateApi from './api/SubstrateApi';
 import endpoints from './config/endpoints.json';
 import _ from 'lodash';
 import * as utils from './utils';
-import { TransferItem, VestedTransferItem, ExtrinsicPayload } from './types';
+import { TransferItem, VestedTransferItem, ExtrinsicPayload, VestingAccount } from './types';
 import { setTimeout as sleep } from 'timers/promises';
 
 export default async function app() {
@@ -11,7 +11,9 @@ export default async function app() {
     await api.start();
 
     const txList = (await utils.readCsv('/Users/bobo/Downloads/reward-vesting-fix2.csv')) as TransferItem[];
-
+    const originalSchedules = (await utils.readJson('/Users/bobo/Downloads/original_vesting_schedules.json')) as VestingAccount[];
+    const updatedSchedules = (await utils.readJson('/Users/bobo/Downloads/updated_vesting_schedules.json')) as VestingAccount[];
+    
     const txVestedList = _.map(txList, (i) => {
         return {
             ...i,
@@ -23,7 +25,10 @@ export default async function app() {
 
     // await sendBatchForceVestedTransfer(api, 'ajYMsCKsEAhEvHpeA4XqsfiA9v1CdzZPrCfS6pEfeGHW9j8', txVestedList);
     // await sendBatchVestedTransfer(api, txVestedList);
-    await sendBatchForceUpdateSchedules(api, txVestedList);
+    // await sendBatchForceUpdateSchedules(api, txVestedList);
+
+    // await sendBatchVestedTransferSchedules(api, originalSchedules);
+    await sendBatchVestedTransferForceUpdateSchedules(api, updatedSchedules);
 
     // we need this to exit out of polkadot-js/api instance
     process.exit(0);
@@ -62,6 +67,30 @@ const sendBatchVestedTransfer = async (api: SubstrateApi, txList: VestedTransfer
     });
 
     await sendAsChunks(api, batchPayload, chunks);
+};
+
+const sendBatchVestedTransferSchedules = async (api: SubstrateApi, accounts: VestingAccount[], chunks: number = 100) => {
+    console.log(`sending batch vested transfer with ${accounts.length} items`);
+    const batchPayload: ExtrinsicPayload[] = [];
+
+    accounts.forEach(account => {
+        account.schedules.forEach(schedule => {
+            batchPayload.push(api.buildTxCall('vesting', 'vestedTransfer', account.address, schedule));
+        });
+    });
+
+    await sendAsChunks(api, batchPayload, chunks);
+};
+
+const sendBatchVestedTransferForceUpdateSchedules = async (api: SubstrateApi, accounts: VestingAccount[], chunks: number = 100) => {
+    console.log(`sending batch force update schedules transfer with ${accounts.length} items`);
+    const batchPayload: ExtrinsicPayload[] = [];
+
+    accounts.forEach(account => {
+        batchPayload.push(api.buildTxCall('vesting', 'forceUpdateSchedules', account.address, account.schedules));
+    });
+
+    await sendAsChunksSudo(api, batchPayload, chunks);
 };
 
 const sendBatchForceVestedTransfer = async (api: SubstrateApi, sourceAccount: string, txList: VestedTransferItem[], chunks: number = 100) => {

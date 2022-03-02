@@ -16,4 +16,9 @@ export interface VestingSchedule {
     startingBlock: number;
 }
 
+export interface VestingAccount {
+    address: string;
+    schedules: VestingSchedule[];
+}
+
 export type ExtrinsicPayload = SubmittableExtrinsic<'promise'>;
