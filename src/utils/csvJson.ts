@@ -40,8 +40,13 @@ export const readJson = async <T>(filePath: string): Promise<T[]> => {
             if (err) {
                 reject(err);
             }
-
-            results = JSON.parse(data.toString());
+            
+            try {
+             results = JSON.parse(data.toString());
+            } catch (e) {
+                reject(e);
+            }
+            
             resolve(results);
         });
     });
