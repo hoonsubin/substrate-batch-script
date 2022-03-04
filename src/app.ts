@@ -2,8 +2,9 @@ import SubstrateApi from './api/SubstrateApi';
 import endpoints from './config/endpoints.json';
 import _ from 'lodash';
 import * as utils from './utils';
-import { TransferItem, VestedTransferItem, ExtrinsicPayload, VestingAccount } from './types';
+import { TransferItem, VestedTransferItem, ExtrinsicPayload, VestingAccount, UnlockedItem } from './types';
 import { setTimeout as sleep } from 'timers/promises';
+import BN from 'bn.js';
 
 export default async function app() {
     const senderKey = process.env.SUBSTRATE_MNEMONIC || '//Alice';
@@ -11,6 +12,7 @@ export default async function app() {
     await api.start();
 
     const txList = (await utils.readCsv('inputs/reward-vesting-fix.csv')) as TransferItem[];
+    const unlockersList = (await utils.readCsv('inputs/unlockers.csv')) as UnlockedItem[];
     const originalSchedules = (await utils.readJson('inputs/original_vesting_schedules.json')) as VestingAccount[];
     const updatedSchedules = (await utils.readJson('inputs/updated_vesting_schedules.json')) as VestingAccount[];
     
@@ -27,8 +29,10 @@ export default async function app() {
     // await sendBatchVestedTransfer(api, txVestedList);
     // await sendBatchForceUpdateSchedules(api, txVestedList);
 
-    await sendBatchVestedTransferSchedules(api, originalSchedules);
-    //await sendBatchVestedTransferForceUpdateSchedules(api, updatedSchedules);
+    //await sendBatchVestedTransferSchedules(api, originalSchedules);
+    await sendBatchVestedTransferForceUpdateSchedules(api, updatedSchedules);
+
+    //calculateUnlockedAmounts(unlockersList, originalSchedules);
 
     // we need this to exit out of polkadot-js/api instance
     process.exit(0);
@@ -174,3 +178,16 @@ const sendAsChunksSudo = async (api: SubstrateApi, batchPayload: ExtrinsicPayloa
         await sleep(10000); // 10 seconds
     }
 };
+
+const calculateUnlockedAmounts = (unlockers: UnlockedItem[], originalSchedules: VestingAccount[]) => {
+    console.log(`addres,vested_total,unlocked,remaining`);  
+    unlockers.map(unlocker => {
+        const totalVested =  originalSchedules
+            .find(x => x.address === unlocker.address)
+            ?.schedules
+            .reduce((previous, current) => new BN(previous).add(new BN(current.locked)), new BN(0))
+            
+        const unlocked = totalVested?.sub(new BN(unlocker.remaining_balance));
+        console.log(`${unlocker.address},${totalVested},${unlocked},${unlocker.remaining_balance}`);    
+    })
+}
