@@ -10,16 +10,16 @@ export default async function app() {
     const api = new SubstrateApi(endpoints.local, senderKey);
     await api.start();
 
-    const txList = (await utils.readCsv('/Users/bobo/Downloads/reward-vesting-fix2.csv')) as TransferItem[];
-    const originalSchedules = (await utils.readJson('/Users/bobo/Downloads/original_vesting_schedules.json')) as VestingAccount[];
-    const updatedSchedules = (await utils.readJson('/Users/bobo/Downloads/updated_vesting_schedules.json')) as VestingAccount[];
+    const txList = (await utils.readCsv('inputs/reward-vesting-fix.csv')) as TransferItem[];
+    const originalSchedules = (await utils.readJson('inputs/original_vesting_schedules.json')) as VestingAccount[];
+    const updatedSchedules = (await utils.readJson('inputs/updated_vesting_schedules.json')) as VestingAccount[];
     
     const txVestedList = _.map(txList, (i) => {
         return {
             ...i,
             vestedMonths: 7,
             // vestedMonths: 15,
-            startingBlock: 210541,
+            startingBlock: 10,
         };
     });
 
@@ -27,8 +27,8 @@ export default async function app() {
     // await sendBatchVestedTransfer(api, txVestedList);
     // await sendBatchForceUpdateSchedules(api, txVestedList);
 
-    // await sendBatchVestedTransferSchedules(api, originalSchedules);
-    await sendBatchVestedTransferForceUpdateSchedules(api, updatedSchedules);
+    await sendBatchVestedTransferSchedules(api, originalSchedules);
+    //await sendBatchVestedTransferForceUpdateSchedules(api, updatedSchedules);
 
     // we need this to exit out of polkadot-js/api instance
     process.exit(0);
