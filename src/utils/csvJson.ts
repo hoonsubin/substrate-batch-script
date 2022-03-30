@@ -31,3 +31,23 @@ export const readCsv = async <T>(filePath: string): Promise<T[]> => {
             });
     });
 };
+
+export const readJson = async <T>(filePath: string): Promise<T[]> => {
+    return new Promise((resolve, reject) => {
+        let results: T[] = [];
+        
+        fs.readFile(filePath, (err, data) => {
+            if (err) {
+                reject(err);
+            }
+            
+            try {
+             results = JSON.parse(data.toString());
+            } catch (e) {
+                reject(e);
+            }
+            
+            resolve(results);
+        });
+    });
+};

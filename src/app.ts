@@ -2,28 +2,37 @@ import SubstrateApi from './api/SubstrateApi';
 import endpoints from './config/endpoints.json';
 import _ from 'lodash';
 import * as utils from './utils';
-import { TransferItem, VestedTransferItem, ExtrinsicPayload } from './types';
+import { TransferItem, VestedTransferItem, ExtrinsicPayload, VestingAccount, UnlockedItem } from './types';
 import { setTimeout as sleep } from 'timers/promises';
+import BN from 'bn.js';
 
 export default async function app() {
     const senderKey = process.env.SUBSTRATE_MNEMONIC || '//Alice';
     const api = new SubstrateApi(endpoints.local, senderKey);
     await api.start();
 
-    const txList = (await utils.readCsv('/Users/hoonkim/Downloads/reward-vesting-fix.csv')) as TransferItem[];
-
+    const txList = (await utils.readCsv('inputs/reward-vesting-fix.csv')) as TransferItem[];
+    const unlockersList = (await utils.readCsv('inputs/unlockers.csv')) as UnlockedItem[];
+    const originalSchedules = (await utils.readJson('inputs/original_vesting_schedules.json')) as VestingAccount[];
+    const updatedSchedules = (await utils.readJson('inputs/updated_vesting_schedules.json')) as VestingAccount[];
+    
     const txVestedList = _.map(txList, (i) => {
         return {
             ...i,
             vestedMonths: 7,
             // vestedMonths: 15,
-            startingBlock: 210541,
+            startingBlock: 10,
         };
     });
 
     // await sendBatchForceVestedTransfer(api, 'ajYMsCKsEAhEvHpeA4XqsfiA9v1CdzZPrCfS6pEfeGHW9j8', txVestedList);
     // await sendBatchVestedTransfer(api, txVestedList);
-    await sendBatchForceUpdateSchedules(api, txVestedList);
+    // await sendBatchForceUpdateSchedules(api, txVestedList);
+
+    //await sendBatchVestedTransferSchedules(api, originalSchedules);
+    await sendBatchVestedTransferForceUpdateSchedules(api, updatedSchedules);
+
+    //calculateUnlockedAmounts(unlockersList, originalSchedules);
 
     // we need this to exit out of polkadot-js/api instance
     process.exit(0);
@@ -62,6 +71,30 @@ const sendBatchVestedTransfer = async (api: SubstrateApi, txList: VestedTransfer
     });
 
     await sendAsChunks(api, batchPayload, chunks);
+};
+
+const sendBatchVestedTransferSchedules = async (api: SubstrateApi, accounts: VestingAccount[], chunks: number = 100) => {
+    console.log(`sending batch vested transfer with ${accounts.length} items`);
+    const batchPayload: ExtrinsicPayload[] = [];
+
+    accounts.forEach(account => {
+        account.schedules.forEach(schedule => {
+            batchPayload.push(api.buildTxCall('vesting', 'vestedTransfer', account.address, schedule));
+        });
+    });
+
+    await sendAsChunks(api, batchPayload, chunks);
+};
+
+const sendBatchVestedTransferForceUpdateSchedules = async (api: SubstrateApi, accounts: VestingAccount[], chunks: number = 100) => {
+    console.log(`sending batch force update schedules transfer with ${accounts.length} items`);
+    const batchPayload: ExtrinsicPayload[] = [];
+
+    accounts.forEach(account => {
+        batchPayload.push(api.buildTxCall('vesting', 'forceUpdateSchedules', account.address, account.schedules));
+    });
+
+    await sendAsChunksSudo(api, batchPayload, chunks);
 };
 
 const sendBatchForceVestedTransfer = async (api: SubstrateApi, sourceAccount: string, txList: VestedTransferItem[], chunks: number = 100) => {
@@ -145,3 +178,16 @@ const sendAsChunksSudo = async (api: SubstrateApi, batchPayload: ExtrinsicPayloa
         await sleep(10000); // 10 seconds
     }
 };
+
+const calculateUnlockedAmounts = (unlockers: UnlockedItem[], originalSchedules: VestingAccount[]) => {
+    console.log(`addres,vested_total,unlocked,remaining`);  
+    unlockers.map(unlocker => {
+        const totalVested =  originalSchedules
+            .find(x => x.address === unlocker.address)
+            ?.schedules
+            .reduce((previous, current) => new BN(previous).add(new BN(current.locked)), new BN(0))
+            
+        const unlocked = totalVested?.sub(new BN(unlocker.remaining_balance));
+        console.log(`${unlocker.address},${totalVested},${unlocked},${unlocker.remaining_balance}`);    
+    })
+}
