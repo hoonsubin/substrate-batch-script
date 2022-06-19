@@ -8,13 +8,13 @@ import csv from 'csv-parser';
  * @param list The object list that will be saved. The object shouldn't be nested or complex.
  * @param path The path to save the csv file. Defaults to `./list.csv`
  */
-export const saveAsCsv = async (list: Array<object>, path: string = './list.csv') => {
+export const saveAsCsv = async (list: Array<any>, path: string = './list.csv') => {
     const csv = new ObjectsToCsv(list);
 
     await csv.toDisk(path);
 };
 
-export const saveAsJson = async (list: Array<object>, path: string = './list.json') => {
+export const saveAsJson = async (list: Array<any>, path: string = './list.json') => {
     const data = JSON.stringify(list);
     await fsPromise.writeFile(path, data);
 };

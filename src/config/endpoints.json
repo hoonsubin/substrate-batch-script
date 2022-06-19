@@ -2,5 +2,6 @@
     "polkadot": "wss://rpc.polkadot.io",
     "astar": "wss://rpc.astar.network",
     "shiden": "wss://rpc.shiden.astar.network",
+    "shibuya": "wss://rpc.shibuya.astar.network",
     "local": "ws://localhost:9944"
 }
