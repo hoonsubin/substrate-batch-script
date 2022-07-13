@@ -91,19 +91,19 @@ export default class SubstrateApi {
 
         const ext = this._api?.tx.balances.forceTransfer(sourceAddress, dest, balance);
         if (ext) return ext;
-        throw 'Undefined force transfer';
+        throw new Error('Undefined force transfer');
     }
 
     public buildTxCall(extrinsic: string, method: string, ...args: any[]): ExtrinsicPayload {
         const ext = this._api?.tx[extrinsic][method](...args);
         if (ext) return ext;
-        throw `Undefined extrinsic call ${extrinsic} with method ${method}`;
+        throw new Error(`Undefined extrinsic call ${extrinsic} with method ${method}`);
     }
 
     public buildStorageQuery(extrinsic: string, method: string, ...args: any[]) {
         const ext = this._api?.query[extrinsic][method](...args);
         if (ext) return ext;
-        throw `Undefined storage query ${extrinsic} for method ${method}`;
+        throw new Error(`Undefined storage query ${extrinsic} for method ${method}`);
     }
 
     public async nonce(): Promise<number | undefined> {
@@ -113,13 +113,13 @@ export default class SubstrateApi {
     public wrapBatchAll(txs: ExtrinsicPayload[]): ExtrinsicPayload {
         const ext = this._api?.tx.utility.batchAll(txs);
         if (ext) return ext;
-        throw 'Undefined batch all';
+        throw new Error('Undefined batch all');
     }
 
     public wrapSudo(tx: ExtrinsicPayload): ExtrinsicPayload {
         const ext = this._api?.tx.sudo.sudo(tx);
         if (ext) return ext;
-        throw 'Undefined sudo';
+        throw new Error('Undefined sudo');
     }
 
     public async signAndSend(tx: ExtrinsicPayload, options?: Partial<SignerOptions>) {
