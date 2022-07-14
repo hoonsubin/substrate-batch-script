@@ -7,32 +7,51 @@ import { setTimeout as sleep } from 'timers/promises';
 import BN from 'bn.js';
 import BigNumber from 'bignumber.js';
 
-import missingLockropRewardBonus from './data/missing-10-ld-reward.json';
-
 export default async function app() {
     const senderKey = process.env.SUBSTRATE_MNEMONIC || '//Alice';
     const api = new SubstrateApi(endpoints.shibuya, senderKey);
     await api.start();
 
-    // add custom behavior
+    // add custom behavior here
 
-    const lockdroRewards = Object.entries(missingLockropRewardBonus);
+    const VESTING_START = 1_400_000;
+    const VESTING_MONTHS = 3;
+    const ASTR_TREASURY = 'YQnbw3oWxBnCUarnbePrjFcrSgVPP2jqTZYzWcccmN8fXhd';
 
-    const txList = lockdroRewards.map((i) => {
-        const amount = utils.tokenToMinimalDenom(i[1], api.chainProperty.tokenDecimals[0])
-        return {
-            address: i[0],
-            amount: amount.toString(),
-        };
+    const arthswapRewards = (await utils.readCsv(
+        '/Users/hoonkim/Projects/substrate-batch-script/src/data/arthswap-rewards.csv',
+    )) as TransferItem[];
+    const astriddaoRewards = (await utils.readCsv(
+        '/Users/hoonkim/Projects/substrate-batch-script/src/data/astriddao-rewards.csv',
+    )) as TransferItem[];
+    const starlayRewards = (await utils.readCsv(
+        '/Users/hoonkim/Projects/substrate-batch-script/src/data/starlay-rewards.csv',
+    )) as TransferItem[];
+
+    const allRewards = [...arthswapRewards, ...astriddaoRewards, ...starlayRewards];
+
+    // send batch transfer with 3 months vesting
+    const batchRewardTransfers = allRewards.map((i) => {
+        const amount = new BN(i.amount);
+        // if the reward is more than 1 ASTR, we send a 3 month vested transfer
+        if (amount.gte(new BN(10).pow(new BN(18)))) {
+            const vestingSchedule = utils.durationToVestingSchedule(VESTING_START, i.amount, VESTING_MONTHS);
+            return api.buildTxCall('vesting', 'forceVestedTransfer', ASTR_TREASURY, i.address, vestingSchedule);
+        }
+
+        // else, we send a normal transfer
+        return api.buildTxCall('balances', 'forceTransfer', ASTR_TREASURY, i.address, amount);
     });
 
-    // const txCalls = sendBatchTransfer(api, txList).map((i) => {
-    //     return i.toHex();
-    // });
+    const splitTx = utils.splitListIntoChunks(batchRewardTransfers, 300);
+    const batchCalls = splitTx.map((i) => {
+        return api.wrapSudo(api.wrapBatchAll(i));
+    });
 
-    console.log(txList);
+    console.log(`There are ${batchCalls.length} batch calls`);
 
-    await utils.saveAsJson(txList, './missing-10-reward-calls.json');
+    await utils.saveAsJson(batchCalls, './dot-festival-reward-batch.json');
+
     // we need this to exit out of polkadot-js/api instance
     process.exit(0);
 }
